@@ -5,6 +5,11 @@ Official CENTCOM Python SDK for human-in-the-loop approval requests and webhook 
 For LangGraph integration, use the companion package:
 [`centcom-langgraph`](https://github.com/contro1-hq/centcom-langgraph).
 
+## Skill
+
+This repo includes an integration skill:
+- `skills/centcom-python-sdk.md`
+
 ## Install
 
 ```bash
