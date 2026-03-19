@@ -113,6 +113,6 @@ Use short polling interval and test API keys for deterministic integration tests
 
 ## Framework Connector Guides
 
-- OpenAI Agents SDK: `docs/integrations/openai-agents-sdk.md`
-- CrewAI: `docs/integrations/crewai.md`
-- n8n: `docs/integrations/n8n.md`
+- OpenAI Agents SDK: `https://github.com/contro1-hq/centcom-openai-agents`
+- CrewAI: `https://github.com/contro1-hq/centcom-crewai`
+- n8n: `https://github.com/contro1-hq/centcom-n8n`
