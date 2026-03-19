@@ -110,3 +110,9 @@ Create request in API thread, finalize decision in webhook handler/worker.
 
 ### Polling in Tests
 Use short polling interval and test API keys for deterministic integration tests.
+
+## Framework Connector Guides
+
+- OpenAI Agents SDK: `docs/integrations/openai-agents-sdk.md`
+- CrewAI: `docs/integrations/crewai.md`
+- n8n: `docs/integrations/n8n.md`

@@ -10,6 +10,12 @@ For LangGraph integration, use the companion package:
 This repo includes an integration skill:
 - `skills/centcom-python-sdk.md`
 
+## Integration Guides
+
+- [OpenAI Agents SDK](docs/integrations/openai-agents-sdk.md)
+- [CrewAI](docs/integrations/crewai.md)
+- [n8n](docs/integrations/n8n.md)
+
 ## Install
 
 ```bash
