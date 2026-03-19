@@ -56,6 +56,16 @@ request = client.create_request(
 
 For polling-only clients, `callback_url` can be omitted.
 
+Mini example (role-gated request):
+```python
+request = client.create_request(
+    type="approval",
+    question="Approve infrastructure change?",
+    context="Terraform plan affects production networking.",
+    required_role="manager",
+)
+```
+
 ## Step 4: Handle Responses
 
 Webhook-first (recommended when available):
