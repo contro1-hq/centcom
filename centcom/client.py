@@ -79,6 +79,7 @@ class CentcomClient:
         callback_url: str,
         priority: str = "normal",
         required_role: Optional[str] = None,
+        approval_policy: Optional[dict] = None,
         response_schema: Optional[dict] = None,
         metadata: Optional[dict] = None,
         sla_minutes: Optional[int] = None,
@@ -94,6 +95,7 @@ class CentcomClient:
             callback_url: Webhook URL for HMAC-signed response delivery
             priority: "normal" (10 min SLA) or "urgent" (3 min SLA)
             required_role: Role tag required to answer (e.g. "manager")
+            approval_policy: Optional quorum policy for multi-person approvals
             response_schema: Expected response structure for validation
             metadata: Arbitrary data returned in the callback
             sla_minutes: Override SLA timeout
@@ -111,6 +113,8 @@ class CentcomClient:
         }
         if required_role:
             body["required_role"] = required_role
+        if approval_policy:
+            body["approval_policy"] = approval_policy
         if response_schema:
             body["response_schema"] = response_schema
         if metadata:

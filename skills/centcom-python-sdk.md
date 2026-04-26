@@ -50,11 +50,20 @@ request = client.create_request(
     context="Customer requested full refund after shipment delay.",
     callback_url="https://your-app.com/centcom-webhook",
     priority="urgent",
+    approval_policy={
+        "mode": "threshold",
+        "required_approvals": 2,
+        "required_roles": ["manager", "admin"],
+        "separation_of_duties": True,
+        "fail_closed_on_timeout": True,
+    },
     metadata={"source": "orders-service"},
 )
 ```
 
 For polling-only clients, `callback_url` can be omitted.
+
+For high-risk actions, set `approval_policy.required_approvals = 2`. The first approval records an audit event but does not trigger the callback or polling terminal state; the request resolves only after quorum, rejection, cancellation, or timeout.
 
 Mini example (role-gated request):
 ```python
@@ -99,6 +108,7 @@ Reject invalid signatures with non-2xx status.
 - Store minimal metadata needed for correlation.
 - Never log raw API keys or secrets.
 - Keep timeout/error handling explicit around network calls.
+- Fail closed if quorum is not reached before timeout for deploys, payments, bulk deletion, or privilege escalation.
 
 ## Common Patterns
 

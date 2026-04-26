@@ -34,9 +34,18 @@ req = client.create_request(
     context="Order #123 refund request",
     question="Approve refund?",
     callback_url="https://your-app.com/centcom-webhook",
+    approval_policy={
+        "mode": "threshold",
+        "required_approvals": 2,
+        "required_roles": ["manager", "admin"],
+        "separation_of_duties": True,
+        "fail_closed_on_timeout": True,
+    },
 )
 print(req["id"])
 ```
+
+For high-risk actions, callbacks are sent only after quorum is met, a reviewer rejects, or the request times out. Partial approvals are audit events and do not resume the agent.
 
 ## Quick Verify
 
