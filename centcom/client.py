@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 import httpx
 
-DEFAULT_BASE_URL = "https://contro1.com/api/centcom/v1"
+DEFAULT_BASE_URL = "https://api.contro1.com/api/centcom/v1"
 DEFAULT_TIMEOUT = 30.0
 
 # States that indicate the request lifecycle is complete or has a response
