@@ -1,3 +1,36 @@
+# Contro1 Python SDK
+
+Python client for Contro1 requests, audit records, webhooks, and thread timelines.
+
+## Ask a human
+
+```python
+client = CentcomClient(api_key=os.environ["CENTCOM_API_KEY"])
+thread_id = client.new_thread_id()
+
+request = client.create_protocol_request({
+    "title": "Approve vendor transfer?",
+    "request_type": "approval",
+    "source": {"integration": "finance-agent"},
+    "continuation": {"mode": "decision", "callback_url": "https://agent.example.com/webhook"},
+    "thread_id": thread_id,
+})
+```
+
+## Log an autonomous action
+
+```python
+client.log_action(
+    action="transfer.executed",
+    summary="Transferred $500 to approved vendor account",
+    source={"integration": "finance-agent"},
+    outcome="success",
+    thread_id=thread_id,
+    in_reply_to={"type": "request", "id": request["id"]},
+)
+```
+
+Use the same API key and base URL for both calls.
 # centcom
 
 Official CENTCOM Python SDK for human-in-the-loop approval requests and webhook verification.

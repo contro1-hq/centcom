@@ -1,3 +1,18 @@
+# Contro1 Python SDK Skill
+
+Use `CentcomClient.create_protocol_request` when an action needs human review. Use `CentcomClient.log_action` when an action is already allowed and should only be recorded.
+
+## Thread rules
+
+- `thread_id` groups related requests and audit records.
+- `in_reply_to` points a follow-up record at a prior request or audit record.
+- Do not use `thread_id` as an idempotency key. Use `external_request_id` for idempotency.
+
+```python
+thread_id = client.new_thread_id()
+request = client.create_protocol_request({... , "thread_id": thread_id})
+client.log_action(..., thread_id=thread_id, in_reply_to={"type": "request", "id": request["id"]})
+```
 ---
 name: centcom-python-sdk
 description: Guide for integrating the CENTCOM Python SDK (request creation, webhook verification, and polling fallback).
@@ -126,3 +141,11 @@ Use short polling interval and test API keys for deterministic integration tests
 - OpenAI Agents SDK: `https://github.com/contro1-hq/centcom-openai-agents`
 - CrewAI: `https://github.com/contro1-hq/centcom-crewai`
 - n8n: `https://github.com/contro1-hq/centcom-n8n`
+
+## Full reference links
+
+- Python SDK repo: https://github.com/contro1-hq/centcom
+- Skill file source: https://github.com/contro1-hq/centcom/blob/main/skills/centcom-python-sdk.md
+- TypeScript SDK repo: https://github.com/contro1-hq/centcom-sdk
+- Audit records and threads docs: https://contro1.com/docs/audit-records-and-threads
+- Requests API docs: https://contro1.com/docs/requests-api
