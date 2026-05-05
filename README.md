@@ -10,6 +10,7 @@ For LangGraph integration, use the companion package:
 This repo includes an integration skill:
 - `skills/centcom-python-sdk.md`
 - `skills/contro1-eu-oversight.md`
+- `skills/contro1-us-ai-governance.md`
 
 ## Connector Repositories
 

@@ -141,6 +141,7 @@ At the end, tell the customer:
 - Python SDK repo: https://github.com/contro1-hq/centcom
 - Python SDK skill source: https://github.com/contro1-hq/centcom/blob/main/skills/centcom-python-sdk.md
 - EU oversight skill: https://github.com/contro1-hq/centcom/blob/main/skills/contro1-eu-oversight.md
+- US AI governance skill: https://github.com/contro1-hq/centcom/blob/main/skills/contro1-us-ai-governance.md
 - TypeScript SDK repo: https://github.com/contro1-hq/centcom-sdk
 - LangGraph connector: https://github.com/contro1-hq/centcom-langgraph
 - OpenAI Agents connector: https://github.com/contro1-hq/centcom-openai-agents
