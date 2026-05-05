@@ -3,9 +3,17 @@
 from __future__ import annotations
 
 import time
+import secrets
 from typing import Any, Optional
 
 import httpx
+from .protocol import (
+    Contro1Request,
+    Contro1Response,
+    from_legacy_request,
+    to_legacy_create_request_params,
+    validate_contro1_request,
+)
 
 DEFAULT_BASE_URL = "https://api.contro1.com/api/centcom/v1"
 DEFAULT_TIMEOUT = 30.0
@@ -82,7 +90,12 @@ class CentcomClient:
         approval_policy: Optional[dict] = None,
         response_schema: Optional[dict] = None,
         metadata: Optional[dict] = None,
+        thread_id: Optional[str] = None,
+        in_reply_to: Optional[dict] = None,
         sla_minutes: Optional[int] = None,
+        risk_level: Optional[str] = None,
+        policy_trigger: Optional[str] = None,
+        approval_requirements: Optional[dict] = None,
         idempotency_key: Optional[str] = None,
     ) -> dict:
         """
@@ -99,6 +112,9 @@ class CentcomClient:
             response_schema: Expected response structure for validation
             metadata: Arbitrary data returned in the callback
             sla_minutes: Override SLA timeout
+            risk_level: Optional customer-assessed risk level: low, medium, high, or critical
+            policy_trigger: Optional customer policy text explaining why oversight is required
+            approval_requirements: Optional audit context for approval expectations
             idempotency_key: Unique key to prevent duplicate requests
 
         Returns:
@@ -119,8 +135,18 @@ class CentcomClient:
             body["response_schema"] = response_schema
         if metadata:
             body["metadata"] = metadata
+        if thread_id:
+            body["thread_id"] = thread_id
+        if in_reply_to:
+            body["in_reply_to"] = in_reply_to
         if sla_minutes is not None:
             body["sla_minutes"] = sla_minutes
+        if risk_level:
+            body["risk_level"] = risk_level
+        if policy_trigger:
+            body["policy_trigger"] = policy_trigger
+        if approval_requirements:
+            body["approval_requirements"] = approval_requirements
 
         headers = {}
         if idempotency_key:
@@ -128,9 +154,76 @@ class CentcomClient:
 
         return self._request("POST", "/requests", json=body, headers=headers)
 
+    def new_thread_id(self) -> str:
+        """Generate a client-side thread id for related requests and audit records."""
+        return f"thr_{secrets.token_hex(16)}"
+
+    def log_action(
+        self,
+        action: str,
+        summary: str,
+        source: dict,
+        actor: Optional[dict] = None,
+        resource: Optional[dict] = None,
+        outcome: str = "success",
+        severity: str = "info",
+        correlation_id: Optional[str] = None,
+        external_request_id: Optional[str] = None,
+        tags: Optional[list[str]] = None,
+        metadata: Optional[dict] = None,
+        occurred_at: Optional[str] = None,
+        thread_id: Optional[str] = None,
+        in_reply_to: Optional[dict] = None,
+    ) -> dict:
+        """Record an autonomous agent action that does not require human review."""
+        body: dict[str, Any] = {
+            "action": action,
+            "summary": summary,
+            "source": source,
+            "outcome": outcome,
+            "severity": severity,
+        }
+        if actor:
+            body["actor"] = actor
+        if resource:
+            body["resource"] = resource
+        if correlation_id:
+            body["correlation_id"] = correlation_id
+        if external_request_id:
+            body["external_request_id"] = external_request_id
+        if tags:
+            body["tags"] = tags
+        if metadata:
+            body["metadata"] = metadata
+        if occurred_at:
+            body["occurred_at"] = occurred_at
+        if thread_id:
+            body["thread_id"] = thread_id
+        if in_reply_to:
+            body["in_reply_to"] = in_reply_to
+
+        return self._request("POST", "/audit-records", json=body)
+
+    def create_protocol_request(self, request: Contro1Request) -> dict:
+        """Create a request using canonical Contro1 Integration Protocol v1 format."""
+        errors = validate_contro1_request(request)
+        if errors:
+            raise ValueError(f"Invalid Contro1Request: {'; '.join(errors)}")
+
+        body, idempotency_key = to_legacy_create_request_params(request)
+        headers = {}
+        if idempotency_key:
+            headers["Idempotency-Key"] = idempotency_key
+        return self._request("POST", "/requests", json=body, headers=headers)
+
     def get_request(self, request_id: str) -> dict:
         """Get the current state of a request."""
         return self._request("GET", f"/requests/{request_id}")
+
+    def get_protocol_response(self, request_id: str) -> Contro1Response:
+        """Get a request and map it to canonical Contro1Response."""
+        req = self.get_request(request_id)
+        return from_legacy_request(req)
 
     def cancel_request(self, request_id: str) -> dict:
         """Cancel a pending request (must not yet be answered)."""
@@ -163,6 +256,16 @@ class CentcomClient:
                 return req
             time.sleep(interval)
         raise TimeoutError(f"Timeout waiting for response on request {request_id}")
+
+    def wait_for_protocol_response(
+        self,
+        request_id: str,
+        interval: float = 3.0,
+        timeout: float = 600.0,
+    ) -> Contro1Response:
+        """Poll and return canonical Contro1Response once terminal."""
+        req = self.wait_for_response(request_id, interval=interval, timeout=timeout)
+        return from_legacy_request(req)
 
     def close(self) -> None:
         """Close the underlying HTTP client."""

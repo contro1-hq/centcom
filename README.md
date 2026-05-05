@@ -9,6 +9,7 @@ For LangGraph integration, use the companion package:
 
 This repo includes an integration skill:
 - `skills/centcom-python-sdk.md`
+- `skills/contro1-eu-oversight.md`
 
 ## Connector Repositories
 
@@ -34,6 +35,8 @@ req = client.create_request(
     context="Order #123 refund request",
     question="Approve refund?",
     callback_url="https://your-app.com/centcom-webhook",
+    risk_level="high",
+    policy_trigger="Refunds above $1,000 require manager review.",
     approval_policy={
         "mode": "threshold",
         "required_approvals": 2,
@@ -69,6 +72,8 @@ request = client.create_protocol_request({
     "title": "Approve vendor transfer?",
     "request_type": "approval",
     "source": {"integration": "finance-agent"},
+    "risk_level": "high",
+    "policy_trigger": "Payments above $10,000 require finance approval.",
     "continuation": {"mode": "decision", "callback_url": "https://agent.example.com/webhook"},
     "thread_id": thread_id,
 })
