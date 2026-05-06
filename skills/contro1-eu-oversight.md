@@ -306,5 +306,5 @@ If anything is uncertain, ask a direct customer question before continuing. Do n
 - Claude Code connector: https://github.com/contro1-hq/centcom-claude-code
 - Claude managed agents connector: https://github.com/contro1-hq/centcom-claude-managed-agents
 - Requests API docs: https://contro1.com/docs/requests-api
-- Audit records and threads docs: https://contro1.com/docs/audit-records-and-threads
+- Audit records and cases docs: https://contro1.com/docs/audit-records-and-cases
 - EU AI Act readiness guide: https://contro1.com/guides/eu-ai-act-readiness

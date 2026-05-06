@@ -148,4 +148,4 @@ At the end, tell the customer:
 - CrewAI connector: https://github.com/contro1-hq/centcom-crewai
 - n8n connector: https://github.com/contro1-hq/centcom-n8n
 - Requests API docs: https://contro1.com/docs/requests-api
-- Audit records and threads docs: https://contro1.com/docs/audit-records-and-threads
+- Audit records and cases docs: https://contro1.com/docs/audit-records-and-cases
