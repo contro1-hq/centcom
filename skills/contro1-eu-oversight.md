@@ -27,6 +27,8 @@ Inspect the codebase for:
 - Existing policy logic: thresholds, tool categories, role checks, prompts, guardrails, workflow rules, approvals.
 - Existing audit/logging: logs, traces, database records, event streams, webhook callbacks.
 - Existing human review: Slack approval, internal admin page, manual ticket, email, or no review path.
+- Existing role mapping: whether external reviewer names such as `cfo`, `finance`, or `risk_manager` are mapped to actual reviewers, shifts, and fallback/deputy reviewers.
+- Existing routing preview: whether the agent can check Control Map before creating a request.
 
 ## Mandatory Output Order
 
@@ -58,6 +60,8 @@ Assess at least these areas:
 - Policy trigger: Is there a clear customer-owned reason for human review?
 - Human decision point: Does execution pause for approval before the risky action?
 - Reviewer routing: Is the request sent to the right role/person/team?
+- External role mapping: Are customer role strings mapped to real Contro1 reviewers with fallback/deputy coverage?
+- Control Map readiness: Can the agent preview reviewer availability, unmapped roles, and two-person approval satisfiability before creating the request?
 - Decision reason: Are approvals/rejections captured with a reason when needed?
 - Audit timeline: Are actions, decisions, callbacks, and outcomes grouped and searchable?
 - Callback/resume safety: Are approval results verified, idempotent, and handled safely?
@@ -73,9 +77,50 @@ Only after the gap report, map each gap to a Contro1 capability:
 - Missing reason for review -> send `policy_trigger`.
 - Missing risk context -> send `risk_level`.
 - Missing role/quorum context -> send `approval_requirements` or enforce with `approval_policy`.
-- Missing grouped timeline -> use `thread_id`.
+- Missing grouped timeline -> use `correlation_id` (case_id) with `in_reply_to`.
 - Missing retry/idempotency safety -> use `external_request_id`.
+- Missing case semantics -> use `correlation_id`/`case_id` for the broader business case and `in_reply_to` for direct follow-ups.
+- Missing routing preview -> call `POST /api/centcom/v1/requests/control-map` before creating the request.
+- Missing fallback reviewer evidence -> configure external role mapping with primary and fallback/deputy reviewers; audit logs must show the actual signer.
 - Missing safe resume -> use signed webhooks and handle approved, denied, cancelled, and timed_out.
+
+## Customer Orchestrator Plugin Pattern
+
+For implementation, recommend a thin adapter so the customer agent only calls 3-4 stable functions:
+
+```python
+class Contro1OversightTool:
+    def __init__(self, client):
+        self.client = client
+        self._preview = None
+        self._preview_at = 0
+
+    def preview_routing(self, payload, ttl_sec=300):
+        now = time.time()
+        if self._preview and now - self._preview_at < ttl_sec:
+            return self._preview
+        self._preview = self.client.post("/api/centcom/v1/requests/control-map", json=payload)
+        self._preview_at = now
+        return self._preview
+
+    def ask_human(self, title, context, case_id, action_id, **kwargs):
+        return self.client.create_protocol_request({
+            "title": title,
+            "context": context,
+            "correlation_id": case_id,
+            "external_request_id": action_id,
+            **kwargs,
+        })
+
+    def log_action(self, action, summary, case_id, in_reply_to=None, **kwargs):
+        return self.client.log_action(
+            action=action,
+            summary=summary,
+            correlation_id=case_id,
+            in_reply_to=in_reply_to,
+            **kwargs,
+        )
+```
 - Missing routing/escalation -> configure routing by role, department, SLA, and escalation in Contro1.
 
 For each mapping, include:
@@ -95,7 +140,7 @@ Explain these capabilities when relevant:
 - `policy_trigger`: human-readable reason why review is required.
 - `approval_requirements`: expected roles/quorum for audit context.
 - `approval_policy`: Contro1-enforced approval mode, quorum, role requirements, and separation of duties.
-- `thread_id`: group related requests and audit records into one timeline.
+- `correlation_id`: group related requests and audit records into one case timeline.
 - `external_request_id`: idempotency for retries.
 - Signed webhooks: resume the workflow only after the final human decision.
 - Operator console: route to the right person by role, department, shift, SLA, and escalation.
@@ -159,7 +204,7 @@ request = client.create_protocol_request({
     },
     "continuation": {"mode": "decision", "webhook_url": "https://agent.example.com/webhook"},
     "external_request_id": f"vendor-payment:{run_id}:atlas-transfer",
-    "thread_id": thread_id,
+    "correlation_id": f"case_vendor_payment_{run_id}",
 })
 ```
 
@@ -175,7 +220,7 @@ client.log_action(
     resource={"type": "file", "id": "report-q4.pdf"},
     outcome="success",
     severity="info",
-    thread_id=thread_id,
+    correlation_id=f"case_vendor_payment_{run_id}",
 )
 ```
 

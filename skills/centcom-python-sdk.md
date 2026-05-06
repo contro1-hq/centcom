@@ -47,7 +47,7 @@ client = CentcomClient(api_key=os.environ["CENTCOM_API_KEY"])
 Use `create_protocol_request` when the workflow must pause for a human decision.
 
 ```python
-thread_id = client.new_thread_id()
+case_id = f"case_vendor_payment_{run_id}"
 
 request = client.create_protocol_request({
     "title": "Approve vendor transfer?",
@@ -68,7 +68,7 @@ request = client.create_protocol_request({
     },
     "continuation": {"mode": "decision", "webhook_url": "https://agent.example.com/webhook"},
     "external_request_id": f"vendor-payment:{run_id}:atlas-transfer",
-    "thread_id": thread_id,
+    "correlation_id": case_id,
 })
 ```
 
@@ -84,20 +84,20 @@ client.log_action(
     resource={"type": "file", "id": "report-q4.pdf"},
     outcome="success",
     severity="info",
-    thread_id=thread_id,
+    correlation_id=case_id,
 )
 ```
 
-## Thread Rules
+## Case Continuity Rules
 
-- `thread_id` groups related requests and audit records.
+- `correlation_id` (case_id) groups related requests and audit records.
 - `in_reply_to` points a follow-up record at a prior request or audit record.
-- Do not use `thread_id` as an idempotency key. Use `external_request_id` for idempotency.
+- Use `external_request_id` as the per-action idempotency key.
 
 ```python
-thread_id = client.new_thread_id()
-request = client.create_protocol_request({... , "thread_id": thread_id})
-client.log_action(..., thread_id=thread_id, in_reply_to={"type": "request", "id": request["id"]})
+case_id = "case_abc_123"
+request = client.create_protocol_request({... , "correlation_id": case_id})
+client.log_action(..., correlation_id=case_id, in_reply_to={"type": "request", "id": request["id"]})
 ```
 
 ## Webhooks and Polling
@@ -121,7 +121,7 @@ result = client.wait_for_protocol_response(request["id"], interval=3, timeout=60
 - Use `create_protocol_request` for human review.
 - Use `log_action` for audit-only records.
 - Send `external_request_id` for idempotency.
-- Send `thread_id` when requests and audit records belong to one run/case.
+- Send `correlation_id` (case_id) when requests and audit records belong to one case.
 - Fail closed on timeout, denial, cancellation, or uncertainty.
 - For high/critical risk or rejection, make sure the human response includes `reason` or `comment`.
 

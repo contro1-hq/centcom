@@ -51,6 +51,51 @@ print(req["id"])
 
 For high-risk actions, callbacks are sent only after quorum is met, a reviewer rejects, or the request times out. Partial approvals are audit events and do not resume the agent.
 
+## Correlation and Routing
+
+- `external_request_id` = one external action idempotency key.
+- `case_id` (send as `correlation_id`) = broader business case that can contain multiple requests and audit records.
+- `in_reply_to` = direct continuation of a prior request or audit record.
+- `POST /api/centcom/v1/requests/control-map` previews role mapping, fallback reviewers, shift coverage, and policy satisfiability before request creation.
+
+## Customer Agent Plugin Pattern
+
+Build one small adapter in the customer orchestrator so agent prompts stay minimal and token-efficient:
+
+```python
+class Contro1Plugin:
+    def __init__(self, client):
+        self.client = client
+        self._control_map_cache = None
+        self._control_map_ts = 0
+
+    def preview_policy(self, payload, ttl_sec=300):
+        now = time.time()
+        if self._control_map_cache and now - self._control_map_ts < ttl_sec:
+            return self._control_map_cache
+        self._control_map_cache = self.client.post("/api/centcom/v1/requests/control-map", json=payload)
+        self._control_map_ts = now
+        return self._control_map_cache
+
+    def request_human_review(self, *, title, context, case_id, action_id, **kwargs):
+        return self.client.create_protocol_request({
+            "title": title,
+            "context": context,
+            "external_request_id": action_id,
+            "correlation_id": case_id,
+            **kwargs,
+        })
+
+    def log_audit_action(self, *, action, summary, case_id, in_reply_to=None, **kwargs):
+        return self.client.log_action(
+            action=action,
+            summary=summary,
+            correlation_id=case_id,
+            in_reply_to=in_reply_to,
+            **kwargs,
+        )
+```
+
 ## Quick Verify
 
 ```bash
@@ -76,7 +121,8 @@ request = client.create_protocol_request({
     "risk_level": "high",
     "policy_trigger": "Payments above $10,000 require finance approval.",
     "continuation": {"mode": "decision", "callback_url": "https://agent.example.com/webhook"},
-    "thread_id": thread_id,
+    "external_request_id": "payment:run_1024:approve",
+    "correlation_id": "case_payment_run_1024",
 })
 ```
 
@@ -88,7 +134,7 @@ client.log_action(
     summary="Transferred $500 to approved vendor account",
     source={"integration": "finance-agent"},
     outcome="success",
-    thread_id=thread_id,
+    correlation_id="case_payment_run_1024",
     in_reply_to={"type": "request", "id": request["id"]},
 )
 ```

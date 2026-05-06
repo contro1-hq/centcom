@@ -40,6 +40,8 @@ Inspect the codebase for:
 - Existing human review: Slack approval, admin page, ticket, email, appeal process, manual review, or no review path.
 - Existing audit/logging: logs, traces, database records, event streams, webhook callbacks, retention/correlation ids.
 - Existing safety behavior: timeout handling, rejection handling, callback verification, idempotency, fail-closed behavior.
+- Existing role mapping: whether external reviewer names such as `cfo`, `finance`, or `risk_manager` are mapped to real people, departments, shifts, and fallback/deputy reviewers.
+- Existing routing preview: whether the agent can check available reviewers before creating a human review request.
 
 ## Mandatory Output Order
 
@@ -71,12 +73,62 @@ Assess at least these areas:
 - Policy trigger: Is there a clear customer-owned reason for human review?
 - Human review point: Does execution pause before consequential or high-impact actions?
 - Reviewer routing: Is review sent to the right role, team, shift, or escalation path?
+- External role mapping: Are customer role strings mapped to actual Contro1 reviewers, with fallback/deputy coverage?
+- Control Map readiness: Can the agent preview reviewer availability, unmapped roles, and two-person approval satisfiability before creating the request?
 - Decision reason: Are approvals/rejections captured with a reason when needed?
 - Audit timeline: Are actions, decisions, callbacks, and outcomes grouped and searchable?
 - Callback/resume safety: Are approvals verified, idempotent, and replay-safe?
 - Timeout/rejection behavior: Does the workflow fail closed or use a defined fallback?
 - Appeal or review path: If customer policy requires human appeal or review, is it implemented?
 - Audit-only evidence: Are allowed autonomous steps logged without pretending they were approved?
+
+## Correlation and Routing Contract
+
+Use these semantics when proposing changes:
+
+- `request_id`: the Contro1 request item returned by the API.
+- `external_request_id`: the customer's idempotency key for one external action.
+- `correlation_id` or `case_id`: the broader business case that may include many requests and audit-only records.
+- `in_reply_to`: the preferred way to say a request or audit record directly follows a previous Contro1 item.
+- `POST /api/centcom/v1/requests/control-map`: preview routing, known departments, mapped roles, on-shift coverage, fallback reviewers, and policy satisfiability before creating a request.
+
+## Customer Orchestrator Plugin Pattern
+
+When you implement, prefer one thin adapter so the customer's agent prompt does not carry the full API contract on every call:
+
+```python
+class Contro1GovernanceTool:
+    def __init__(self, client):
+        self.client = client
+        self._preview = None
+        self._preview_at = 0
+
+    def preview(self, payload, ttl_sec=300):
+        now = time.time()
+        if self._preview and now - self._preview_at < ttl_sec:
+            return self._preview
+        self._preview = self.client.post("/api/centcom/v1/requests/control-map", json=payload)
+        self._preview_at = now
+        return self._preview
+
+    def request_review(self, title, context, case_id, action_id, **kwargs):
+        return self.client.create_protocol_request({
+            "title": title,
+            "context": context,
+            "correlation_id": case_id,
+            "external_request_id": action_id,
+            **kwargs,
+        })
+
+    def log_autonomous_action(self, action, summary, case_id, in_reply_to=None, **kwargs):
+        return self.client.log_action(
+            action=action,
+            summary=summary,
+            correlation_id=case_id,
+            in_reply_to=in_reply_to,
+            **kwargs,
+        )
+```
 
 ## Gap-to-Contro1 Mapping
 
@@ -87,7 +139,7 @@ Only after the gap report, map each gap to a Contro1 capability:
 - Missing reason for review -> send `policy_trigger`.
 - Missing risk context -> send `risk_level`.
 - Missing role/quorum context -> send `approval_requirements` or enforce with `approval_policy`.
-- Missing grouped timeline -> use `thread_id`.
+- Missing grouped timeline -> use `correlation_id` (case_id) with `in_reply_to`.
 - Missing retry/idempotency safety -> use `external_request_id`.
 - Missing safe resume -> use signed webhooks and handle approved, denied, cancelled, and timed_out.
 - Missing routing/escalation -> configure routing by role, department, SLA, and escalation in Contro1.
@@ -157,7 +209,7 @@ request = client.create_protocol_request({
     },
     "continuation": {"mode": "decision", "webhook_url": "https://agent.example.com/webhook"},
     "external_request_id": f"account-review:{run_id}:restriction",
-    "thread_id": thread_id,
+    "correlation_id": f"case_account_review_{run_id}",
 })
 ```
 
