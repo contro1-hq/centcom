@@ -2,6 +2,14 @@
 
 Official CENTCOM Python SDK for human-in-the-loop approval requests and webhook verification.
 
+## Agent Integration Kit
+
+To save time, give your coding agent this skill. It inspects your system, reports governance gaps, and suggests Contro1 integration (optional):
+
+```
+https://contro1.com/agent-kit
+```
+
 For LangGraph integration, use the companion package:
 [`centcom-langgraph`](https://github.com/contro1-hq/centcom-langgraph).
 
