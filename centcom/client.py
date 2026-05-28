@@ -95,6 +95,8 @@ class CentcomClient:
         sla_minutes: Optional[int] = None,
         risk_level: Optional[str] = None,
         policy_trigger: Optional[str] = None,
+        policy_context: Optional[dict] = None,
+        approval_comment_required: Optional[bool] = None,
         approval_requirements: Optional[dict] = None,
         idempotency_key: Optional[str] = None,
     ) -> dict:
@@ -114,6 +116,8 @@ class CentcomClient:
             sla_minutes: Override SLA timeout
             risk_level: Optional customer-assessed risk level: low, medium, high, or critical
             policy_trigger: Optional customer policy text explaining why oversight is required
+            policy_context: Optional policy/risk evidence envelope from any policy source
+            approval_comment_required: Require reviewer comment even when risk is not high/critical
             approval_requirements: Optional audit context for approval expectations
             idempotency_key: Unique key to prevent duplicate requests
 
@@ -145,6 +149,10 @@ class CentcomClient:
             body["risk_level"] = risk_level
         if policy_trigger:
             body["policy_trigger"] = policy_trigger
+        if policy_context:
+            body["policy_context"] = policy_context
+        if approval_comment_required is not None:
+            body["approval_comment_required"] = approval_comment_required
         if approval_requirements:
             body["approval_requirements"] = approval_requirements
 

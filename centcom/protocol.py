@@ -74,9 +74,20 @@ class ApprovalRequirements(TypedDict, total=False):
     must_include_roles: list[str]
 
 
+class PolicyContext(TypedDict, total=False):
+    source: str
+    policy_name: str
+    rule_id: str
+    rule_reason: str
+    policy_version: str
+    enforcement: str
+
+
 class DecisionContext(TypedDict, total=False):
     risk_level: Contro1RiskLevel
     policy_trigger: str
+    policy_context: PolicyContext
+    approval_comment_required: bool
     approval_requirements: ApprovalRequirements
 
 
@@ -97,6 +108,8 @@ class Contro1Request(TypedDict, total=False):
     approval_policy: ApprovalPolicy
     risk_level: Contro1RiskLevel
     policy_trigger: str
+    policy_context: PolicyContext
+    approval_comment_required: bool
     approval_requirements: ApprovalRequirements
     decision_context: DecisionContext
     metadata: dict[str, Any]
@@ -223,6 +236,17 @@ def validate_contro1_request(request: Contro1Request) -> list[str]:
     if policy_trigger is not None and (not isinstance(policy_trigger, str) or not policy_trigger.strip()):
         errors.append("policy_trigger must be non-empty when provided")
 
+    policy_context = request.get("policy_context")
+    if policy_context is not None:
+        if not isinstance(policy_context, dict):
+            errors.append("policy_context must be an object when provided")
+        elif not any(isinstance(value, str) and value.strip() for value in policy_context.values()):
+            errors.append("policy_context must contain at least one non-empty field")
+
+    approval_comment_required = request.get("approval_comment_required")
+    if approval_comment_required is not None and not isinstance(approval_comment_required, bool):
+        errors.append("approval_comment_required must be a boolean when provided")
+
     thread_id = request.get("thread_id")
     if isinstance(thread_id, str) and thread_id and not re.match(r"^thr_[A-Za-z0-9_-]{1,64}$", thread_id):
         errors.append("thread_id must match thr_[A-Za-z0-9_-]{1,64}")
@@ -261,6 +285,8 @@ def to_legacy_create_request_params(request: Contro1Request) -> tuple[dict[str, 
     decision_context = dict(request.get("decision_context") or {})
     risk_level = request.get("risk_level")
     policy_trigger = request.get("policy_trigger")
+    policy_context = request.get("policy_context")
+    approval_comment_required = request.get("approval_comment_required")
     approval_requirements = request.get("approval_requirements")
     if risk_level:
         decision_context["risk_level"] = risk_level
@@ -268,6 +294,12 @@ def to_legacy_create_request_params(request: Contro1Request) -> tuple[dict[str, 
     if policy_trigger:
         decision_context["policy_trigger"] = policy_trigger
         metadata["policy_trigger"] = policy_trigger
+    if policy_context:
+        decision_context["policy_context"] = policy_context
+        metadata["policy_context"] = policy_context
+    if approval_comment_required is not None:
+        decision_context["approval_comment_required"] = approval_comment_required
+        metadata["approval_comment_required"] = approval_comment_required
     if approval_requirements:
         decision_context["approval_requirements"] = approval_requirements
         metadata["approval_requirements"] = approval_requirements
@@ -320,6 +352,10 @@ def to_legacy_create_request_params(request: Contro1Request) -> tuple[dict[str, 
         body["risk_level"] = risk_level
     if policy_trigger:
         body["policy_trigger"] = policy_trigger
+    if policy_context:
+        body["policy_context"] = policy_context
+    if approval_comment_required is not None:
+        body["approval_comment_required"] = approval_comment_required
     if approval_requirements:
         body["approval_requirements"] = approval_requirements
     if isinstance(thread_id, str) and thread_id:

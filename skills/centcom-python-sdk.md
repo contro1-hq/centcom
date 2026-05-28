@@ -61,6 +61,15 @@ request = client.create_protocol_request({
     },
     "risk_level": "high",
     "policy_trigger": "Payments above $10,000 require finance approval and CFO review.",
+    "policy_context": {
+        "source": "custom_rules",
+        "policy_name": "finance-transfer-controls",
+        "rule_id": "vendor-payment-over-10000",
+        "rule_reason": "Payments above $10,000 require finance approval and CFO review.",
+        "policy_version": "git:8f42c1a",
+        "enforcement": "require_approval",
+    },
+    "approval_comment_required": True,
     "approval_requirements": {
         "required_approvals": 2,
         "required_roles": ["finance"],
@@ -122,6 +131,8 @@ result = client.wait_for_protocol_response(request["id"], interval=3, timeout=60
 - Use `log_action` for audit-only records.
 - Send `external_request_id` for idempotency.
 - Send `correlation_id` (case_id) when requests and audit records belong to one case.
+- Send `policy_context` when any policy source, rules service, risk classifier, or application rule caused the review.
+- Set `approval_comment_required` when a reviewer must justify approval even if risk is not high or critical.
 - Fail closed on timeout, denial, cancellation, or uncertainty.
 - For high/critical risk or rejection, make sure the human response includes `reason` or `comment`.
 
