@@ -138,6 +138,8 @@ Explain these capabilities when relevant:
 - `client.log_action(...)`: record audit-only events without blocking execution.
 - `risk_level`: customer-assessed risk context.
 - `policy_trigger`: human-readable reason why review is required.
+- `policy_context`: optional policy/risk evidence from Microsoft AGT, OPA, Cedar, custom rules, risk classifiers, or application code.
+- `approval_comment_required`: require reviewer justification even outside high/critical risk.
 - `approval_requirements`: expected roles/quorum for audit context.
 - `approval_policy`: Contro1-enforced approval mode, quorum, role requirements, and separation of duties.
 - `correlation_id`: group related requests and audit records into one case timeline.
@@ -190,6 +192,15 @@ request = client.create_protocol_request({
     },
     "risk_level": "high",
     "policy_trigger": "Payments above $10,000 require finance approval and CFO review.",
+    "policy_context": {
+        "source": "custom_rules",
+        "policy_name": "finance-transfer-controls",
+        "rule_id": "payment-over-10000",
+        "rule_reason": "Payments above $10,000 require finance approval and CFO review.",
+        "policy_version": "git:8f42c1a",
+        "enforcement": "require_approval",
+    },
+    "approval_comment_required": True,
     "approval_requirements": {
         "required_approvals": 2,
         "required_roles": ["finance"],
@@ -230,6 +241,7 @@ client.log_action(
 - TypeScript/Node/custom HTTP: use https://github.com/contro1-hq/centcom-sdk and https://github.com/contro1-hq/centcom-sdk/blob/main/skills/contro1-eu-oversight.md.
 - LangGraph: use https://github.com/contro1-hq/centcom-langgraph and https://github.com/contro1-hq/centcom-langgraph/blob/main/skills/centcom-langgraph.md.
 - OpenAI Agents SDK: use https://github.com/contro1-hq/centcom-openai-agents and https://github.com/contro1-hq/centcom-openai-agents/blob/main/skills/centcom-openai-agents.md.
+- Microsoft AGT policy approvals: use https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration and https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration/blob/main/skills/contro1-microsoft-agent-governance-toolkit-integration.md.
 - CrewAI: use https://github.com/contro1-hq/centcom-crewai and https://github.com/contro1-hq/centcom-crewai/blob/main/skills/centcom-crewai.md.
 - n8n: use https://github.com/contro1-hq/centcom-n8n and https://github.com/contro1-hq/centcom-n8n/blob/main/skills/centcom-n8n.md.
 - Claude Code: use https://github.com/contro1-hq/centcom-claude-code.

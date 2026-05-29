@@ -156,6 +156,7 @@ At the end, tell the customer:
 - TypeScript SDK repo: https://github.com/contro1-hq/centcom-sdk
 - LangGraph connector: https://github.com/contro1-hq/centcom-langgraph
 - OpenAI Agents connector: https://github.com/contro1-hq/centcom-openai-agents
+- Microsoft AGT companion skill: https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration/blob/main/skills/contro1-microsoft-agent-governance-toolkit-integration.md
 - CrewAI connector: https://github.com/contro1-hq/centcom-crewai
 - n8n connector: https://github.com/contro1-hq/centcom-n8n
 - Requests API docs: https://contro1.com/docs/requests-api

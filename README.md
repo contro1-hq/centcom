@@ -133,6 +133,7 @@ python -c "import centcom; print('centcom installed')"
 ## Related Packages
 
 - [`centcom-langgraph`](https://github.com/contro1-hq/centcom-langgraph) for LangGraph pause/resume workflows
+- [`contro1-microsoft-agent-governance-toolkit-integration`](https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration) for Microsoft AGT `require_approval` policy decisions
 - [`@contro1/sdk`](https://github.com/contro1-hq/centcom-sdk) for Node/TypeScript integrations
 - [`@contro1/claude-code`](https://github.com/contro1-hq/centcom-claude-code) for Claude Code `PreToolUse` approvals
 

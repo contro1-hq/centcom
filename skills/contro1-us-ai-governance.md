@@ -137,6 +137,8 @@ Only after the gap report, map each gap to a Contro1 capability:
 - Missing human pause -> use `client.create_protocol_request(...)` around the risky tool/action.
 - Missing audit-only trail -> use `client.log_action(...)`.
 - Missing reason for review -> send `policy_trigger`.
+- Missing policy source evidence -> send `policy_context`.
+- Missing required reviewer justification -> set `approval_comment_required`.
 - Missing risk context -> send `risk_level`.
 - Missing role/quorum context -> send `approval_requirements` or enforce with `approval_policy`.
 - Missing grouped timeline -> use `correlation_id` (case_id) with `in_reply_to`.
@@ -197,6 +199,15 @@ request = client.create_protocol_request({
     },
     "risk_level": "high",
     "policy_trigger": "Customer-impacting adverse actions require human review under internal AI governance policy.",
+    "policy_context": {
+        "source": "custom_rules",
+        "policy_name": "customer-impact-controls",
+        "rule_id": "adverse-account-action",
+        "rule_reason": "Customer-impacting adverse actions require human review under internal AI governance policy.",
+        "policy_version": "git:8f42c1a",
+        "enforcement": "require_approval",
+    },
+    "approval_comment_required": True,
     "approval_requirements": {
         "required_approvals": 1,
         "required_roles": ["support_lead"],
@@ -256,6 +267,7 @@ Use this structure before implementing:
 - TypeScript/Node/custom HTTP: use https://github.com/contro1-hq/centcom-sdk and https://github.com/contro1-hq/centcom-sdk/blob/main/skills/contro1-us-ai-governance.md.
 - LangGraph: use https://github.com/contro1-hq/centcom-langgraph and https://github.com/contro1-hq/centcom-langgraph/blob/main/skills/centcom-langgraph.md.
 - OpenAI Agents SDK: use https://github.com/contro1-hq/centcom-openai-agents and https://github.com/contro1-hq/centcom-openai-agents/blob/main/skills/centcom-openai-agents.md.
+- Microsoft AGT policy approvals: use https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration and https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration/blob/main/skills/contro1-microsoft-agent-governance-toolkit-integration.md.
 - CrewAI: use https://github.com/contro1-hq/centcom-crewai and https://github.com/contro1-hq/centcom-crewai/blob/main/skills/centcom-crewai.md.
 - n8n: use https://github.com/contro1-hq/centcom-n8n and https://github.com/contro1-hq/centcom-n8n/blob/main/skills/centcom-n8n.md.
 - Claude Code: use https://github.com/contro1-hq/centcom-claude-code.
@@ -293,6 +305,7 @@ If anything is uncertain, ask a direct customer question before continuing. Do n
 - TypeScript SDK: https://github.com/contro1-hq/centcom-sdk
 - LangGraph connector: https://github.com/contro1-hq/centcom-langgraph
 - OpenAI Agents connector: https://github.com/contro1-hq/centcom-openai-agents
+- Microsoft AGT companion: https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration
 - CrewAI connector: https://github.com/contro1-hq/centcom-crewai
 - n8n connector: https://github.com/contro1-hq/centcom-n8n
 - Claude Code connector: https://github.com/contro1-hq/centcom-claude-code
