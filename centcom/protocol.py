@@ -100,6 +100,11 @@ class Contro1Request(TypedDict, total=False):
     external_request_id: str
     thread_id: str
     in_reply_to: dict[str, str]
+    trace_id: str
+    parent_trace_id: str
+    tool_calls: list[dict[str, Any]]
+    sub_agents: list[dict[str, Any]]
+    retrieved_context: list[dict[str, Any]]
     source: Contro1Source
     routing: Contro1Routing
     actor: Contro1Actor
@@ -251,6 +256,14 @@ def validate_contro1_request(request: Contro1Request) -> list[str]:
     if isinstance(thread_id, str) and thread_id and not re.match(r"^thr_[A-Za-z0-9_-]{1,64}$", thread_id):
         errors.append("thread_id must match thr_[A-Za-z0-9_-]{1,64}")
 
+    trace_id = request.get("trace_id")
+    if isinstance(trace_id, str) and trace_id and not re.match(r"^trc_[A-Za-z0-9_-]{1,64}$", trace_id):
+        errors.append("trace_id must match trc_[A-Za-z0-9_-]{1,64}")
+
+    parent_trace_id = request.get("parent_trace_id")
+    if isinstance(parent_trace_id, str) and parent_trace_id and not re.match(r"^trc_[A-Za-z0-9_-]{1,64}$", parent_trace_id):
+        errors.append("parent_trace_id must match trc_[A-Za-z0-9_-]{1,64}")
+
     return errors
 
 
@@ -319,6 +332,15 @@ def to_legacy_create_request_params(request: Contro1Request) -> tuple[dict[str, 
         metadata["thread_id"] = thread_id
     if isinstance(in_reply_to, dict):
         metadata["in_reply_to"] = in_reply_to
+    tool_calls = request.get("tool_calls")
+    sub_agents = request.get("sub_agents")
+    retrieved_context = request.get("retrieved_context")
+    if isinstance(tool_calls, list) and tool_calls:
+        metadata["tool_calls"] = tool_calls
+    if isinstance(sub_agents, list) and sub_agents:
+        metadata["sub_agents"] = sub_agents
+    if isinstance(retrieved_context, list) and retrieved_context:
+        metadata["retrieved_context"] = retrieved_context
 
     request_type = str(request.get("request_type", "approval"))
     routing = request.get("routing") or {}
@@ -362,6 +384,18 @@ def to_legacy_create_request_params(request: Contro1Request) -> tuple[dict[str, 
         body["thread_id"] = thread_id
     if isinstance(in_reply_to, dict):
         body["in_reply_to"] = in_reply_to
+    trace_id = request.get("trace_id")
+    parent_trace_id = request.get("parent_trace_id")
+    if isinstance(trace_id, str) and trace_id:
+        body["trace_id"] = trace_id
+    if isinstance(parent_trace_id, str) and parent_trace_id:
+        body["parent_trace_id"] = parent_trace_id
+    if isinstance(tool_calls, list) and tool_calls:
+        body["tool_calls"] = tool_calls
+    if isinstance(sub_agents, list) and sub_agents:
+        body["sub_agents"] = sub_agents
+    if isinstance(retrieved_context, list) and retrieved_context:
+        body["retrieved_context"] = retrieved_context
 
     source = request.get("source") or {}
     idempotency_key = external_request_id or correlation_id

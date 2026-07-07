@@ -101,7 +101,7 @@ class Contro1Plugin:
         now = time.time()
         if self._control_map_cache and now - self._control_map_ts < ttl_sec:
             return self._control_map_cache
-        self._control_map_cache = self.client.post("/api/centcom/v1/requests/control-map", json=payload)
+        self._control_map_cache = self.client.preview_control_map(payload)
         self._control_map_ts = now
         return self._control_map_cache
 
@@ -145,6 +145,7 @@ thread_id = client.new_thread_id()
 
 request = client.create_protocol_request({
     "title": "Approve vendor transfer?",
+    "description": "Payment run 1024 wants to transfer funds to a vendor.",
     "request_type": "approval",
     "source": {"integration": "finance-agent"},
     "risk_level": "high",
@@ -178,3 +179,12 @@ client.log_action(
 ```
 
 Use the same API key and base URL for both calls.
+
+## API
+
+- `request(method, path, **kwargs)`, `get(path, params=None)`, `post(path, json=None)`, `delete(path, json=None)`
+- `create_request(...)`, `create_protocol_request(request)`, `log_action(...)`
+- `preview_control_map(params)`, `list_requests(...)`, `get_request(request_id)`
+- `get_protocol_response(request_id)`, `wait_for_response(...)`, `wait_for_protocol_response(...)`
+- `get_request_evidence(request_id)`, `get_thread(thread_id)`, `get_trace(trace_id)`
+- `register_agent(...)`, `list_agents(...)`, `get_agent(...)`, `get_agent_trail(...)`, `get_agent_evidence(...)`

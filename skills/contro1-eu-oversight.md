@@ -99,7 +99,7 @@ class Contro1OversightTool:
         now = time.time()
         if self._preview and now - self._preview_at < ttl_sec:
             return self._preview
-        self._preview = self.client.post("/api/centcom/v1/requests/control-map", json=payload)
+        self._preview = self.client.preview_control_map(payload)
         self._preview_at = now
         return self._preview
 

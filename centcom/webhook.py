@@ -27,6 +27,22 @@ def verify_webhook(
 
     Returns:
         True if the signature is valid and the timestamp is fresh
+
+    Example:
+        from centcom import verify_webhook
+
+        @app.post("/webhook")
+        def handle_webhook():
+            raw = request.get_data(as_text=True)
+            sig = request.headers.get("X-CentCom-Signature", "")
+            ts = request.headers.get("X-CentCom-Timestamp", "")
+
+            if not verify_webhook(raw, sig, ts, WEBHOOK_SECRET):
+                return "Invalid signature", 401
+
+            payload = request.get_json()
+            # ... handle payload
+            return "OK", 200
     """
     # Validate timestamp
     try:
