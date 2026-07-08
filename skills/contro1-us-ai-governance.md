@@ -42,6 +42,7 @@ Inspect the codebase for:
 - Existing safety behavior: timeout handling, rejection handling, callback verification, idempotency, fail-closed behavior.
 - Existing role mapping: whether external reviewer names such as `cfo`, `finance`, or `risk_manager` are mapped to real people, departments, shifts, and fallback/deputy reviewers.
 - Existing routing preview: whether the agent can check available reviewers before creating a human review request.
+- Execution-side enforcement: whether the code that performs each gated action verifies the signed Contro1 approval before executing, or whether any agent or service (including a shadow agent nobody registered) can call the tool directly.
 
 ## Mandatory Output Order
 
@@ -78,6 +79,7 @@ Assess at least these areas:
 - Decision reason: Are approvals/rejections captured with a reason when needed?
 - Audit timeline: Are actions, decisions, callbacks, and outcomes grouped and searchable?
 - Callback/resume safety: Are approvals verified, idempotent, and replay-safe?
+- Execution-side enforcement (anti-bypass): Can the gated action run without a verified approval? If the tool executes for any caller, a shadow or unregistered agent bypasses the entire review layer. The gate belongs in the executing system: verify signature + freshness, bind the approval to the exact action parameters via metadata / correlation_id, execute each request_id once, and pull-verify with GET /v1/requests/:id when in doubt.
 - Timeout/rejection behavior: Does the workflow fail closed or use a defined fallback?
 - Appeal or review path: If customer policy requires human appeal or review, is it implemented?
 - Audit-only evidence: Are allowed autonomous steps logged without pretending they were approved?
@@ -144,6 +146,7 @@ Only after the gap report, map each gap to a Contro1 capability:
 - Missing grouped timeline -> use `correlation_id` (case_id) with `in_reply_to`.
 - Missing retry/idempotency safety -> use `external_request_id`.
 - Missing safe resume -> use signed webhooks and handle approved, denied, cancelled, and timed_out.
+- Missing bypass protection -> enforce the approval at the execution point: the service performing the action verifies the signed webhook, matches the exact action parameters, and runs each request_id once. Emphasize to the customer: any tool that must never run via a shadow or unregistered agent must demand a verified signed approval before executing.
 - Missing routing/escalation -> configure routing by role, department, SLA, and escalation in Contro1.
 
 For each mapping, include:
@@ -294,6 +297,7 @@ At the end of the work, explain to the customer:
 - which actions use `log_action`
 - what payload fields are sent to Contro1
 - which fields are required versus optional
+- which gated actions verify the signed approval at execution, and which still execute without verification (bypass risk for shadow or unregistered agents)
 - what assumptions were made
 - what still needs customer, governance, or legal confirmation
 

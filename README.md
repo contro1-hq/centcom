@@ -68,6 +68,50 @@ print(req["id"])
 
 For high-risk actions, callbacks are sent only after quorum is met, a reviewer rejects, or the request times out. Partial approvals are audit events and do not resume the agent.
 
+## Enforce approvals at execution (anti-bypass guardrail)
+
+The signed webhook is cryptographic proof of a human decision. Put the check inside the code that performs the action - not inside the agent. When the executing code refuses to act without a verified approval, no agent can trigger that action by skipping Contro1, including shadow agents nobody registered. Any tool that must never run without human sign-off (payments, deploys, data deletion) should demand a verified signed approval at its execution point.
+
+Four rules turn the webhook into a real gate:
+
+1. **Signature + freshness**: `verify_webhook` rejects invalid signatures and timestamps older than 5 minutes (replay protection). The timestamp marks callback delivery, not request creation - a decision that takes hours or days still arrives freshly signed, and every retry is re-signed, so long SLAs are unaffected.
+2. **Bind the approval to the exact action**: match `metadata` / `correlation_id` and the action parameters (amount, target, record ids) before executing. "An approval arrived" is never permission for a different action.
+3. **One-time use**: execute each `request_id` exactly once (keep an idempotency record).
+4. **Pull-verify when in doubt**: confirm state directly with `client.get_request(request_id)` using a read-only API key instead of trusting state an agent hands you.
+
+```python
+from centcom import verify_webhook
+
+# The execution gate lives in the service that performs the action - not in the agent.
+@app.post("/webhooks/contro1")
+async def contro1_webhook(request: Request):
+    raw = await request.body()
+    # 1. Signature + freshness: rejects forgeries and replayed approvals.
+    #    The timestamp is the callback's SEND time, not the request's creation
+    #    time - a decision that took days still verifies (retries are re-signed).
+    if not verify_webhook(raw, request.headers["X-CentCom-Signature"],
+                          request.headers["X-CentCom-Timestamp"], WEBHOOK_SECRET):
+        raise HTTPException(401, "invalid signature")
+
+    payload = json.loads(raw)
+    if payload.get("status") != "approved":
+        return {"ok": True}
+
+    # 2. Bind the approval to the exact pending action and its parameters
+    action = pending_actions.get(payload["metadata"]["case_id"])
+    if not action or action.amount != payload["metadata"]["amount"]:
+        alert_security("approval does not match a pending action", payload["request_id"])
+        return {"ok": True}
+
+    # 3. One-time use: a request_id executes exactly once
+    if not executed.add_if_absent(payload["request_id"]):
+        return {"ok": True}
+
+    # 4. Only now perform the action
+    perform_action(action)
+    return {"ok": True}
+```
+
 ## Correlation and Routing
 
 - `external_request_id` = one external action idempotency key.

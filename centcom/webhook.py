@@ -7,6 +7,10 @@ import hmac
 import time
 
 
+# The timestamp is stamped when CENTCOM SENDS the callback, not when the
+# request was created. A decision that took hours or days still arrives
+# freshly signed (every delivery attempt and retry is re-signed), so this
+# window never conflicts with long SLAs - it only blocks replayed callbacks.
 MAX_TIMESTAMP_AGE_SECONDS = 300  # 5 minutes
 
 
