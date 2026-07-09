@@ -28,7 +28,7 @@ Inspect the codebase for:
 - Existing audit/logging: logs, traces, database records, event streams, webhook callbacks.
 - Existing human review: Slack approval, internal admin page, manual ticket, email, or no review path.
 - Existing role mapping: whether external reviewer names such as `cfo`, `finance`, or `risk_manager` are mapped to actual reviewers, shifts, and fallback/deputy reviewers.
-- Existing routing preview: whether the agent can check Control Map before creating a request.
+- Existing routing preview: whether the agent can check Control Map when routing certainty matters.
 - Execution-side enforcement: whether the code that performs each gated action verifies the signed Contro1 approval before executing, or whether any agent or service (including a shadow agent nobody registered) can call the tool directly.
 
 ## Mandatory Output Order
@@ -62,7 +62,7 @@ Assess at least these areas:
 - Human decision point: Does execution pause for approval before the risky action?
 - Reviewer routing: Is the request sent to the right role/person/team?
 - External role mapping: Are customer role strings mapped to real Contro1 reviewers with fallback/deputy coverage?
-- Control Map readiness: Can the agent preview reviewer availability, unmapped roles, and two-person approval satisfiability before creating the request?
+- Control Map readiness: Can the agent preview reviewer availability, unmapped roles, and two-person approval satisfiability for complex routing?
 - Decision reason: Are approvals/rejections captured with a reason when needed?
 - Audit timeline: Are actions, decisions, callbacks, and outcomes grouped and searchable?
 - Callback/resume safety: Are approval results verified, idempotent, and handled safely?
@@ -82,7 +82,7 @@ Only after the gap report, map each gap to a Contro1 capability:
 - Missing grouped timeline -> use `correlation_id` (case_id) with `in_reply_to`.
 - Missing retry/idempotency safety -> use `external_request_id`.
 - Missing case semantics -> use `correlation_id`/`case_id` for the broader business case and `in_reply_to` for direct follow-ups.
-- Missing routing preview -> call `POST /api/centcom/v1/requests/control-map` before creating the request.
+- Missing routing preview -> use `POST /api/centcom/v1/requests/control-map` when the workflow needs routing certainty.
 - Missing fallback reviewer evidence -> configure external role mapping with primary and fallback/deputy reviewers; audit logs must show the actual signer.
 - Missing safe resume -> use signed webhooks and handle approved, denied, cancelled, and timed_out.
 - Missing bypass protection -> enforce the approval at the execution point: the service performing the action verifies the signed webhook, matches the exact action parameters, and runs each request_id once. Emphasize to the customer: any tool that must never run via a shadow or unregistered agent must demand a verified signed approval before executing.

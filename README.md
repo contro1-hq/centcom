@@ -117,7 +117,7 @@ async def contro1_webhook(request: Request):
 - `external_request_id` = one external action idempotency key.
 - `case_id` (send as `correlation_id`) = broader business case that can contain multiple requests and audit records.
 - `in_reply_to` = direct continuation of a prior request or audit record.
-- `POST /api/centcom/v1/requests/control-map` previews role mapping, fallback reviewers, shift coverage, and policy satisfiability before request creation.
+- `POST /api/centcom/v1/requests/control-map` optionally previews role mapping, fallback reviewers, shift coverage, and policy satisfiability for complex routing.
 
 ## Policy evidence fields
 

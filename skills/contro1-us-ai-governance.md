@@ -41,7 +41,7 @@ Inspect the codebase for:
 - Existing audit/logging: logs, traces, database records, event streams, webhook callbacks, retention/correlation ids.
 - Existing safety behavior: timeout handling, rejection handling, callback verification, idempotency, fail-closed behavior.
 - Existing role mapping: whether external reviewer names such as `cfo`, `finance`, or `risk_manager` are mapped to real people, departments, shifts, and fallback/deputy reviewers.
-- Existing routing preview: whether the agent can check available reviewers before creating a human review request.
+- Existing routing preview: whether the agent can check available reviewers for complex human review routing.
 - Execution-side enforcement: whether the code that performs each gated action verifies the signed Contro1 approval before executing, or whether any agent or service (including a shadow agent nobody registered) can call the tool directly.
 
 ## Mandatory Output Order
@@ -75,7 +75,7 @@ Assess at least these areas:
 - Human review point: Does execution pause before consequential or high-impact actions?
 - Reviewer routing: Is review sent to the right role, team, shift, or escalation path?
 - External role mapping: Are customer role strings mapped to actual Contro1 reviewers, with fallback/deputy coverage?
-- Control Map readiness: Can the agent preview reviewer availability, unmapped roles, and two-person approval satisfiability before creating the request?
+- Control Map readiness: Can the agent preview reviewer availability, unmapped roles, and two-person approval satisfiability when routing certainty matters?
 - Decision reason: Are approvals/rejections captured with a reason when needed?
 - Audit timeline: Are actions, decisions, callbacks, and outcomes grouped and searchable?
 - Callback/resume safety: Are approvals verified, idempotent, and replay-safe?
@@ -92,7 +92,7 @@ Use these semantics when proposing changes:
 - `external_request_id`: the customer's idempotency key for one external action.
 - `correlation_id` or `case_id`: the broader business case that may include many requests and audit-only records.
 - `in_reply_to`: the preferred way to say a request or audit record directly follows a previous Contro1 item.
-- `POST /api/centcom/v1/requests/control-map`: preview routing, known departments, mapped roles, on-shift coverage, fallback reviewers, and policy satisfiability before creating a request.
+- `POST /api/centcom/v1/requests/control-map`: optionally preview routing, known departments, mapped roles, on-shift coverage, fallback reviewers, and policy satisfiability for complex requests.
 
 ## Customer Orchestrator Plugin Pattern
 
