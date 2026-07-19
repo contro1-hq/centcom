@@ -81,6 +81,39 @@ request = client.create_protocol_request({
 })
 ```
 
+## Send context the reviewer can trust
+
+Build the request's `context` at the gate - the code that intercepts the tool call, not the agent - from three sources: the exact tool input (copied verbatim by your code, so it is a machine-observed fact the reviewer can trust), the trigger that started the run (the user message or event), and the agent's own justification. Make `reason` a required parameter of the risky tool/function so the model produces it at decision time; asking the agent "why" after the fact is unreliable.
+
+Separate provenance inside `context`: put facts your code observed in a `machine_observed` block, and put text the model wrote in an `agent_reported` block.
+
+```python
+request = client.create_protocol_request({
+    "title": "Approve $12,400 transfer to acct_889?",
+    "request_type": "approval",
+    "context": {
+        "action": {"tool": "transfer_money", "input": {"to": "acct_889", "amount_usd": 12400}},
+        "machine_observed": {
+            "triggered_by": "Support ticket #5521: customer requests refund for order #1842",
+            "recent_tool_calls": ["lookup_order", "check_refund_policy"],
+        },
+        "agent_reported": {
+            "justification": "Refund qualifies under the shipping-failure exception policy.",
+        },
+    },
+    "risk_level": "high",
+    "source": {"integration": "finance-agent", "workflow_id": "vendor-payment", "run_id": run_id},
+    "external_request_id": f"vendor-payment:{run_id}:atlas-transfer",
+})
+```
+
+Two hard trust rules:
+
+- `agent_reported` text must never change routing, `risk_level`, or approval policy - it only informs the human. A prompt-injected agent will write a very persuasive justification.
+- If a high-risk request arrives without its required `machine_observed` context, fail closed (reject/bounce) instead of asking a human to guess.
+
+See https://contro1.com/docs/requests-api for the full pattern.
+
 ## Log an Autonomous Action
 
 Use `log_action` when the agent was already authorized and Contro1 only needs durable evidence.

@@ -11,7 +11,6 @@ from .protocol import (
     Contro1Request,
     Contro1Response,
     from_legacy_request,
-    to_legacy_create_request_params,
     validate_contro1_request,
 )
 
@@ -293,7 +292,8 @@ class CentcomClient:
         if errors:
             raise ValueError(f"Invalid Contro1Request: {'; '.join(errors)}")
 
-        body, idempotency_key = to_legacy_create_request_params(request)
+        body = dict(request)
+        idempotency_key = request.get("external_request_id") or request.get("correlation_id") or (request.get("source") or {}).get("run_id")
         headers = {}
         if idempotency_key:
             headers["Idempotency-Key"] = idempotency_key
@@ -301,11 +301,7 @@ class CentcomClient:
 
     def preview_control_map(self, params: dict) -> dict:
         """Preview role mapping, fallback routing, shift coverage, and policy satisfiability."""
-        looks_protocol = any(key in params for key in ("request_type", "source", "continuation"))
-        if looks_protocol:
-            body, _idempotency_key = to_legacy_create_request_params(params)  # type: ignore[arg-type]
-        else:
-            body = dict(params)
+        body = dict(params)
         body.pop("idempotency_key", None)
         return self._request("POST", "/requests/control-map", json=body)
 

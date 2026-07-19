@@ -224,6 +224,25 @@ request = client.create_protocol_request({
 
 For `risk_level: "high"` or `"critical"`, the operator response must include a non-empty `reason` or `comment`. Rejections also require `reason` or `comment`.
 
+### Send Context the Reviewer Can Trust
+
+Build `context` at the gate (the code intercepting the tool call), from the exact tool input copied verbatim, the trigger that started the run, and the agent's own justification - make `reason` a required parameter of the risky tool so the model produces it at decision time rather than after the fact. Inside `context`, separate provenance: a `machine_observed` block for facts your code observed, and an `agent_reported` block for text the model wrote:
+
+```python
+"context": {
+    "action": {"tool": "send_payment", "input": {"vendor": "atlas-ltd", "amount_usd": 52400}},
+    "machine_observed": {
+        "triggered_by": "Invoice INV-9821 received from new vendor bank account",
+        "recent_tool_calls": ["lookup_vendor", "check_invoice"],
+    },
+    "agent_reported": {
+        "justification": "Invoice matches PO-4471 and vendor is registered in AP system.",
+    },
+},
+```
+
+`agent_reported` text must never change routing, `risk_level`, or approval policy - it only informs the human, since a prompt-injected agent can produce a very persuasive justification. If a high-risk request arrives without its required `machine_observed` context, fail closed instead of asking a human to guess. Full pattern: https://contro1.com/docs/requests-api
+
 ## Audit-Only Pattern
 
 ```python

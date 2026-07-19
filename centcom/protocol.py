@@ -49,6 +49,9 @@ class Contro1Context(TypedDict, total=False):
     resource: str
     environment: str
     summary: str
+    action: dict[str, Any]
+    machine_observed: dict[str, Any]
+    agent_reported: dict[str, Any]
 
 
 class Contro1Continuation(TypedDict, total=False):
@@ -132,6 +135,7 @@ class Contro1Response(TypedDict, total=False):
     operator: Contro1Operator
     message: str
     structured_response: dict[str, Any]
+    decision_type: Literal["approve", "reject", "respond"]
     resolved_at: str
 
 
@@ -439,8 +443,17 @@ def from_legacy_request(legacy_request: dict[str, Any]) -> Contro1Response:
         resolved_at = datetime.now(timezone.utc).isoformat()
 
     structured_response = response if isinstance(response, dict) else None
+    canonical_decision = structured_response.get("decision_type") if structured_response else None
+    if canonical_decision in ("approve", "reject", "respond"):
+        decision_type = canonical_decision
+    elif legacy_request.get("type") == "approval" and structured_response and isinstance(structured_response.get("approved"), bool):
+        decision_type = "approve" if structured_response["approved"] else "reject"
+    elif structured_response:
+        decision_type = "respond"
+    else:
+        decision_type = None
 
-    return {
+    result: Contro1Response = {
         "request_id": str(legacy_request.get("id", "")),
         "status": _infer_status(legacy_request),
         "operator": operator,
@@ -448,3 +461,6 @@ def from_legacy_request(legacy_request: dict[str, Any]) -> Contro1Response:
         "structured_response": structured_response,
         "resolved_at": resolved_at,
     }
+    if decision_type is not None:
+        result["decision_type"] = decision_type
+    return result

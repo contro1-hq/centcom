@@ -36,37 +36,61 @@ pip install centcom
 
 ```python
 import os
-from centcom import CentcomClient, verify_webhook
+from centcom import CentcomClient
+
+def issue_refund() -> None:
+    ...  # Your business logic runs only after approval.
 
 client = CentcomClient(api_key=os.environ["CENTCOM_API_KEY"])
-req = client.create_request(
-    type="approval",
-    context="Order #123 refund request",
-    question="Approve refund?",
-    callback_url="https://your-app.com/centcom-webhook",
-    risk_level="high",
-    policy_trigger="Refunds above $1,000 require manager review.",
-    policy_context={
-        "source": "custom_rules",
-        "policy_name": "refund-controls",
-        "rule_id": "refund-over-1000",
-        "rule_reason": "Refunds above $1,000 require manager review.",
-        "policy_version": "git:8f42c1a",
-        "enforcement": "require_approval",
+agent = client.register_agent("Refund Agent", framework="custom-agent")["agent"]
+
+req = client.create_protocol_request({
+    "title": "Approve refund for order #123?",
+    "request_type": "approval",
+    "source": {"integration": "python-sdk"},
+    "actor": {"agent_id": agent["agent_id"]},
+    "context": {
+        "action": {"tool": "issue_refund", "input": {"order_id": 123, "amount_usd": 1200}},
+        "machine_observed": {"trigger": "Customer refund request"},
+        "agent_reported": {"justification": "Shipping-failure exception"},
     },
-    approval_comment_required=True,
-    approval_policy={
-        "mode": "threshold",
-        "required_approvals": 2,
-        "required_roles": ["manager", "admin"],
-        "separation_of_duties": True,
-        "fail_closed_on_timeout": True,
-    },
-)
-print(req["id"])
+    "continuation": {"mode": "decision"},
+    "risk_level": "high",
+    "policy_trigger": "Refunds above $1,000 require manager review",
+})
+
+decision = client.wait_for_protocol_response(req["request_id"])
+if decision["decision_type"] == "approve":
+    issue_refund()  # Resume only after the canonical human decision.
 ```
 
-For high-risk actions, callbacks are sent only after quorum is met, a reviewer rejects, or the request times out. Partial approvals are audit events and do not resume the agent.
+For callback-based agents, add `callback_url` inside the same `continuation` object and verify the signed webhook before resuming. Partial approvals are audit events and do not resume the agent.
+
+## Send context the reviewer can trust
+
+Build the request's `context` at the gate (the code that intercepts the tool call), from three sources: the exact tool input copied verbatim by your code, the user message or event that triggered the run, and the agent's own justification (make `reason` a required parameter of the risky tool so the model produces it at decision time, not after the fact).
+
+Keep provenance separate inside `context`: a `machine_observed` block for facts your code observed, and an `agent_reported` block for text the model wrote. `agent_reported` text must never change routing, `risk_level`, or approval policy - it only informs the human, since a prompt-injected agent can write a very persuasive justification. If a high-risk request arrives without its required `machine_observed` context, fail closed instead of asking a human to guess.
+
+```python
+req = client.create_protocol_request({
+    "title": "Approve $12,400 transfer to acct_889?",
+    "request_type": "approval",
+    "context": {
+        "action": {"tool": "transfer_money", "input": {"to": "acct_889", "amount_usd": 12400}},
+        "machine_observed": {
+            "triggered_by": "Support ticket #5521: customer requests refund for order #1842",
+            "recent_tool_calls": ["lookup_order", "check_refund_policy"],
+        },
+        "agent_reported": {
+            "justification": "Refund qualifies under the shipping-failure exception policy.",
+        },
+    },
+    "risk_level": "high",
+})
+```
+
+See https://contro1.com/docs/requests-api for the full pattern.
 
 ## Enforce approvals at execution (anti-bypass guardrail)
 
@@ -127,6 +151,9 @@ Use these fields from any policy or risk source, not only a specific framework:
 - `policy_trigger`: short human-readable reason review is required.
 - `policy_context`: evidence envelope with `source`, `policy_name`, `rule_id`, `rule_reason`, `policy_version`, and `enforcement`.
 - `approval_comment_required`: force reviewer justification even when risk is low or medium.
+- `decision_comment_policy`: effective per-key snapshot returned as `optional`, `risk_based`, or `always`; a request can tighten it but cannot loosen it.
+
+Keep these concepts separate: `policy_trigger` explains why automation paused; `context.agent_reported.justification` is the agent's unverified claim; an approval decision comment is written by the reviewer when policy requires it; a `free_text` response is the requested human input itself and is always non-empty.
 
 Contro1 does not need to own your policy engine. Your app, rules service, Microsoft AGT, OPA, Cedar, or custom code can decide that review is required; Contro1 handles routing, human decision, signed callback, and audit evidence.
 
@@ -179,7 +206,7 @@ python -c "import centcom; print('centcom installed')"
 - [`centcom-langgraph`](https://github.com/contro1-hq/centcom-langgraph) for LangGraph pause/resume workflows
 - [`contro1-microsoft-agent-governance-toolkit-integration`](https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration) for Microsoft AGT `require_approval` policy decisions
 - [`@contro1/sdk`](https://github.com/contro1-hq/centcom-sdk) for Node/TypeScript integrations
-- [`@contro1/claude-code`](https://github.com/contro1-hq/centcom-claude-code) for Claude Code `PreToolUse` approvals
+- [`@contro1/claude-code`](https://github.com/contro1-hq/centcom-claude-code) for selective production-deploy approvals at Claude Code's `PermissionRequest` boundary
 
 ## Ask a human
 
