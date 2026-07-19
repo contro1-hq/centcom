@@ -1,7 +1,7 @@
 [project]
 name = "centcom"
-version = "1.1.0"
-description = "Official CENTCOM Python SDK for requests and webhook verification"
+version = "1.2.0"
+description = "Official Contro1 Python SDK for human approvals, human input, signed webhooks, and audit evidence"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }

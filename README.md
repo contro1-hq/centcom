@@ -1,6 +1,10 @@
 # centcom
 
-Official CENTCOM Python SDK for human-in-the-loop approval requests and webhook verification.
+Official Contro1 Python SDK for human approvals, human input, signed webhooks, and audit evidence.
+
+`centcom` is the framework-agnostic Python package. Use it from any Python agent,
+service, worker, tool runner, or webhook bridge. Framework and coding-agent
+connectors are separate adapters that use the same Contro1 API and decision model.
 
 ## Agent Integration Kit
 
@@ -25,6 +29,7 @@ This repo includes an integration skill:
 - [centcom-openai-agents](https://github.com/contro1-hq/centcom-openai-agents)
 - [centcom-crewai](https://github.com/contro1-hq/centcom-crewai)
 - [centcom-n8n](https://github.com/contro1-hq/centcom-n8n)
+- [@contro1/claude-code](https://github.com/contro1-hq/centcom-claude-code) — Node-based Claude Code connector, published on npm rather than PyPI
 
 ## Install
 
@@ -206,7 +211,7 @@ python -c "import centcom; print('centcom installed')"
 - [`centcom-langgraph`](https://github.com/contro1-hq/centcom-langgraph) for LangGraph pause/resume workflows
 - [`contro1-microsoft-agent-governance-toolkit-integration`](https://github.com/contro1-hq/contro1-microsoft-agent-governance-toolkit-integration) for Microsoft AGT `require_approval` policy decisions
 - [`@contro1/sdk`](https://github.com/contro1-hq/centcom-sdk) for Node/TypeScript integrations
-- [`@contro1/claude-code`](https://github.com/contro1-hq/centcom-claude-code) for selective production-deploy approvals at Claude Code's `PermissionRequest` boundary
+- [`@contro1/claude-code`](https://github.com/contro1-hq/centcom-claude-code) for gating any selected Claude Code tool action through a `PreToolUse` hook; published on npm rather than PyPI
 
 ## Ask a human
 
