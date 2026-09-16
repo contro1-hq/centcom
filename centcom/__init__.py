@@ -55,4 +55,4 @@ __all__ = _RUNTIME_EXPORTS + [
     "to_legacy_create_request_params",
     "from_legacy_request",
 ]
-__version__ = "1.2.0"
+__version__ = "1.3.1"
