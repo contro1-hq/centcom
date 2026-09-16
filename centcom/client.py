@@ -50,21 +50,39 @@ class CentcomClient:
 
     def __init__(
         self,
-        api_key: str,
+        api_key: Optional[str] = None,
         base_url: str = DEFAULT_BASE_URL,
         timeout: float = DEFAULT_TIMEOUT,
+        *,
+        auth: Optional[Any] = None,
+        transport: Optional[Any] = None,
     ):
-        if not api_key:
-            raise ValueError("api_key is required")
+        """One client, one identity.
+
+        Pass exactly one of:
+
+        * ``api_key`` - an organization or agent API key;
+        * ``auth`` - ``RuntimeAuth(provider)`` for an owner-approved connection
+          this process holds the key for;
+        * ``transport`` - ``broker_transport(endpoint)`` to go through this
+          computer's Contro1 service, which holds the credential instead.
+        """
+        configured = [value for value in (api_key, auth, transport) if value]
+        if not configured:
+            raise ValueError("api_key is required (or auth=RuntimeAuth(...), or transport=broker_transport(...))")
+        if len(configured) > 1:
+            raise ValueError("configure exactly one of api_key, auth or transport: one client, one identity")
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
         self._http = httpx.Client(
             base_url=self.base_url,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
+            headers=headers,
             timeout=timeout,
+            **({"auth": auth} if auth else {}),
+            **({"transport": transport} if transport else {}),
         )
 
     def _request(self, method: str, path: str, **kwargs: Any) -> Any:
@@ -72,7 +90,12 @@ class CentcomClient:
         content_type = res.headers.get("content-type", "")
         data = res.json() if res.content and "application/json" in content_type else res.text
         if res.status_code >= 400:
-            message = data.get("message", f"HTTP {res.status_code}") if isinstance(data, dict) else f"HTTP {res.status_code}"
+            message = f"HTTP {res.status_code}"
+            if isinstance(data, dict):
+                error = data.get("error") if isinstance(data.get("error"), dict) else {}
+                # A refusal about identity, setup or policy carries a
+                # remediation an agent can repeat to a person.
+                message = data.get("message") or error.get("message") or message
             raise CentcomError(
                 message=message,
                 status_code=res.status_code,

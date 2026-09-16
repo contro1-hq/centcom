@@ -12,7 +12,37 @@ from .protocol import (
 )
 from .webhook import verify_webhook
 
-__all__ = [
+# Runtime connections need the optional "cryptography" extra:
+#   pip install "centcom[runtime]"
+try:  # pragma: no cover - optional extra
+    from .runtime.auth import RuntimeAuth, broker_transport
+    from .runtime.dpop import DpopKey
+    from .runtime.enrollment import exchange_workload_token, register_key_with_ticket, wait_for_approval
+    from .runtime.token_provider import (
+        FileCredentialStore,
+        InMemoryCredentialStore,
+        RuntimeCredentialError,
+        RuntimeTokenProvider,
+        StoredCredential,
+    )
+
+    _RUNTIME_EXPORTS = [
+        "RuntimeAuth",
+        "RuntimeTokenProvider",
+        "RuntimeCredentialError",
+        "StoredCredential",
+        "InMemoryCredentialStore",
+        "FileCredentialStore",
+        "DpopKey",
+        "broker_transport",
+        "register_key_with_ticket",
+        "wait_for_approval",
+        "exchange_workload_token",
+    ]
+except ImportError:  # pragma: no cover - optional extra
+    _RUNTIME_EXPORTS = []
+
+__all__ = _RUNTIME_EXPORTS + [
     "CentcomClient",
     "verify_webhook",
     "CONTRO1_REQUEST_TYPES",
