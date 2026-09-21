@@ -56,6 +56,7 @@ class CentcomClient:
         *,
         auth: Optional[Any] = None,
         transport: Optional[Any] = None,
+        reach: Optional[dict] = None,
     ):
         """One client, one identity.
 
@@ -66,6 +67,30 @@ class CentcomClient:
           this process holds the key for;
         * ``transport`` - ``broker_transport(endpoint)`` to go through this
           computer's Contro1 service, which holds the credential instead.
+
+        ``reach`` says who is able to instruct this agent. An agent running in
+        your own backend has no adapter Contro1 can ask: a scheduled job only
+        you trigger and a service answering thousands of customers look
+        identical from the outside, and they are very different things to hand
+        a mailbox to. You know which this is.
+
+        Declaring it shared stops the agent using anybody's personal account
+        unless its owner allows that by name. On a surface several people can
+        reach, the agent cannot tell its owner from anyone else: it acts with
+        its own authority either way.
+
+        It can only ever make things stricter. The declaration arrives on this
+        agent's own credential, so claiming to be private would let any agent
+        unlock personal accounts by saying so; the server refuses that. Privacy
+        is established by a person, with ``contro1 connect``.
+
+            client = CentcomClient(
+                api_key=...,
+                reach={"contexts": [
+                    {"context_id": "support-api", "label": "Customer support API",
+                     "kind": "shared", "participants_known": False},
+                ]},
+            )
         """
         configured = [value for value in (api_key, auth, transport) if value]
         if not configured:
@@ -77,6 +102,8 @@ class CentcomClient:
         headers = {"Content-Type": "application/json"}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
+        self._reach = reach
+        self._reach_declared = False
         self._http = httpx.Client(
             base_url=self.base_url,
             headers=headers,
@@ -85,7 +112,28 @@ class CentcomClient:
             **({"transport": transport} if transport else {}),
         )
 
+    def declare_reach(self, reach: dict) -> Any:
+        """Tell Contro1 how exposed this agent is. Safe to call again."""
+        return self._request("POST", "/runtime/reach", json=reach)
+
+    def _declare_reach_once(self) -> None:
+        if not self._reach or self._reach_declared:
+            return
+        self._reach_declared = True
+        try:
+            self.declare_reach(self._reach)
+        except Exception:
+            # Deliberately swallowed. The declaration only makes this agent
+            # stricter, so losing it leaves it exactly as governed as before,
+            # and taking somebody's work down to record a safety note would be
+            # the wrong trade.
+            pass
+
     def _request(self, method: str, path: str, **kwargs: Any) -> Any:
+        # Declared before the first real call, so the server knows how exposed
+        # this agent is before it is asked to do anything.
+        if self._reach and not self._reach_declared and path != "/runtime/reach":
+            self._declare_reach_once()
         res = self._http.request(method, path, **kwargs)
         content_type = res.headers.get("content-type", "")
         data = res.json() if res.content and "application/json" in content_type else res.text

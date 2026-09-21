@@ -71,6 +71,49 @@ if decision["decision_type"] == "approve":
 
 For callback-based agents, add `callback_url` inside the same `continuation` object and verify the signed webhook before resuming. Partial approvals are audit events and do not resume the agent.
 
+## Say who can instruct this agent
+
+Contro1 refuses a personal account to an agent that more than one person can
+instruct. It has to: the agent performs the action with its own authority, so on
+a shared surface it cannot tell its owner from anybody else who arrived the same
+way. Put an assistant that reads its owner's mailbox behind an API your
+customers call, and any of them can ask it what the mailbox holds.
+
+On a platform Contro1 connects to, an adapter reports this. An agent you built
+with the SDK has no adapter to ask: a nightly job only you trigger and a service
+answering thousands of customers look identical from here. So you say which it
+is.
+
+```python
+from centcom import CentcomClient
+
+client = CentcomClient(
+    api_key=os.environ["CENTCOM_API_KEY"],
+    # Sent once, before the first call. Only ever makes this agent stricter.
+    reach={
+        "contexts": [
+            {
+                "context_id": "support-api",
+                "label": "Customer support API",
+                "kind": "shared",
+                "participants_known": False,
+            }
+        ]
+    },
+)
+```
+
+**It can only ever make things stricter.** The declaration arrives on the
+agent's own credential, which means it is the software describing itself, and
+letting it claim to be private would let any agent unlock personal accounts by
+saying so. The server refuses that shape by name. Privacy is established by a
+person, with `contro1 connect`, on a machine they control.
+
+Nothing changes for an agent that does not declare it, and nothing changes for
+organization or shared connections, which already sit inside a resource boundary
+somebody approved. This is specifically about one person's account being
+borrowed by software that answers to several.
+
 ## Send context the reviewer can trust
 
 Build the request's `context` at the gate (the code that intercepts the tool call), from three sources: the exact tool input copied verbatim by your code, the user message or event that triggered the run, and the agent's own justification (make `reason` a required parameter of the risky tool so the model produces it at decision time, not after the fact).
