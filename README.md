@@ -37,6 +37,33 @@ This repo includes an integration skill:
 pip install centcom
 ```
 
+## Run an Action
+
+Contro1 holds the application account and makes the call; your agent asks for an Action and gets back what it produced. Authenticate with an **Agent Credential** (Settings, API keys, Create Agent Credential): a key bound to one agent. The agent can only run Actions somebody granted it under Access. Full guide: [Connect an agent](https://contro1.com/docs/connect-an-agent).
+
+```python
+import os, uuid
+from centcom import CentcomClient, needs_human_resolution
+
+client = CentcomClient(api_key=os.environ["CONTRO1_API_KEY"])
+
+out = client.actions.invoke(
+    "gmail.message.list", {"max_results": 5},
+    authority_mode="agent_principal",   # the agent acts as itself
+    account_mode="shared",              # the account it was granted
+    idempotency_key=str(uuid.uuid4()),  # required for side effects; never derived from the payload
+)
+inv = out["invocation"]
+if inv["state"] == "executed":
+    messages = out["result"]
+elif inv["state"] == "awaiting_approval":           # a person decides first
+    settled = client.actions.wait_for_invocation(inv["invocation_id"])  # re-reads, never re-submits
+    if needs_human_resolution(settled):
+        raise RuntimeError("Outcome unknown: a person must check. Do not retry.")
+    messages = client.actions.get_result(settled["invocation_id"])
+```
+
+On a person's own account (their Gmail), call with `authority_mode="user_delegated"`, `acting_user_id=<that person>` and `account_mode="personal"`. It works when that person delegated the Action to this agent.
 ## Quick Start
 
 ```python

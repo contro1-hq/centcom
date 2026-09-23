@@ -1,3 +1,11 @@
+from .actions import (
+    ACTION_TERMINAL_STATES,
+    ActionResultUnavailable,
+    ActionsApi,
+    ActionTimeout,
+    did_execute,
+    needs_human_resolution,
+)
 from .client import CentcomClient
 from .protocol import (
     CONTRO1_CONTINUATION_MODES,
@@ -44,6 +52,12 @@ except ImportError:  # pragma: no cover - optional extra
 
 __all__ = _RUNTIME_EXPORTS + [
     "CentcomClient",
+    "ActionsApi",
+    "ActionTimeout",
+    "ActionResultUnavailable",
+    "ACTION_TERMINAL_STATES",
+    "needs_human_resolution",
+    "did_execute",
     "verify_webhook",
     "CONTRO1_REQUEST_TYPES",
     "CONTRO1_CONTINUATION_MODES",
@@ -55,4 +69,4 @@ __all__ = _RUNTIME_EXPORTS + [
     "to_legacy_create_request_params",
     "from_legacy_request",
 ]
-__version__ = "1.3.1"
+__version__ = "1.5.0"

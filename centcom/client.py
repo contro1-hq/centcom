@@ -7,6 +7,7 @@ import secrets
 from typing import Any, Optional
 
 import httpx
+from .actions import ActionsApi
 from .protocol import (
     Contro1Request,
     Contro1Response,
@@ -111,6 +112,10 @@ class CentcomClient:
             **({"auth": auth} if auth else {}),
             **({"transport": transport} if transport else {}),
         )
+        # Namespaced rather than flattened onto the client: running an Action
+        # with a customer's credential is a different kind of call from asking a
+        # person a question, and it should read that way at the call site.
+        self.actions = ActionsApi(self)
 
     def declare_reach(self, reach: dict) -> Any:
         """Tell Contro1 how exposed this agent is. Safe to call again."""
