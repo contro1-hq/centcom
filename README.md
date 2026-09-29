@@ -345,11 +345,18 @@ from centcom.tracing import TraceRun
 from centcom.hooks.langchain import Contro1TraceHandler      # LangChain / LangGraph
 from centcom.hooks.openai_agents import Contro1RunHooks      # OpenAI Agents SDK
 from centcom.hooks.strands import Contro1HookProvider        # Strands Agents
+from centcom.hooks.crewai import Contro1CrewHooks            # CrewAI (1.7.0)
+from centcom.hooks.pydantic_ai import contro1_toolset        # Pydantic AI (1.7.0)
 
 run = TraceRun(client, source="custom", fail_closed=True)
 lookup_order = run.wrap(lookup_order)                         # start and end of every call reported
 
 graph.invoke(inputs, config={"callbacks": [Contro1TraceHandler(client, fail_closed=True)]})
+
+with Contro1CrewHooks(client, fail_closed=True, per_agent=True):   # each crew member reports as a part
+    crew.kickoff()
+
+agent = Agent(model, toolsets=[contro1_toolset(FunctionToolset([lookup_order]), client, fail_closed=True)])
 ```
 
 `fail_closed=True` means a tool whose start Contro1 could not record does not run. Full guide: https://contro1.com/docs/agent-traceability-and-evidence
