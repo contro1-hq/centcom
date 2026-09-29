@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import time
 import secrets
 from typing import Any, Optional
@@ -105,6 +106,9 @@ class CentcomClient:
             headers["Authorization"] = f"Bearer {api_key}"
         self._reach = reach
         self._reach_declared = False
+        # Headers every call from this view carries (as_sub_agent).
+        self._extra_headers: dict[str, str] = {}
+        self.sub_agent: Optional[str] = None
         self._http = httpx.Client(
             base_url=self.base_url,
             headers=headers,
@@ -116,6 +120,32 @@ class CentcomClient:
         # with a customer's credential is a different kind of call from asking a
         # person a question, and it should read that way at the call site.
         self.actions = ActionsApi(self)
+
+    def as_sub_agent(self, name: str) -> "CentcomClient":
+        """The same agent, acting as one named part of it.
+
+        For a multi-agent system that runs in one process with one credential:
+        a supervisor and its workers, a crew, a graph of agents. Each part
+        calls through its own view, and Contro1 registers the part under this
+        agent the first time it is seen - no setup, no second credential::
+
+            researcher = client.as_sub_agent("researcher")
+            researcher.log_action(...)            # recorded as the researcher
+            researcher.actions.invoke(...)        # runs with this agent's grants
+
+        A part never has more authority than this agent: it runs on this
+        agent's grants, an administrator can narrow or block each part, and
+        blocking this agent blocks every part of it. The view shares this
+        client's connection; closing either closes both.
+        """
+        name = name.strip()
+        if not name or len(name) > 64:
+            raise ValueError("a sub-agent name is 1-64 characters")
+        view = copy.copy(self)
+        view._extra_headers = {**self._extra_headers, "Contro1-Sub-Agent": name}
+        view.sub_agent = name
+        view.actions = ActionsApi(view)
+        return view
 
     def declare_reach(self, reach: dict) -> Any:
         """Tell Contro1 how exposed this agent is. Safe to call again."""
@@ -139,6 +169,8 @@ class CentcomClient:
         # this agent is before it is asked to do anything.
         if self._reach and not self._reach_declared and path != "/runtime/reach":
             self._declare_reach_once()
+        if self._extra_headers:
+            kwargs["headers"] = {**self._extra_headers, **(kwargs.get("headers") or {})}
         res = self._http.request(method, path, **kwargs)
         content_type = res.headers.get("content-type", "")
         data = res.json() if res.content and "application/json" in content_type else res.text
@@ -432,13 +464,20 @@ class CentcomClient:
         framework: Optional[str] = None,
         description: Optional[str] = None,
         owner: Optional[str] = None,
+        parent_agent_id: Optional[str] = None,
     ) -> dict:
-        """Register or retrieve a claimed agent identity."""
+        """Register or retrieve a claimed agent identity.
+
+        ``parent_agent_id`` places a separate program under the agent that
+        starts it. It gets its own credential and grants and inherits nothing;
+        for a part that runs in the same process, use ``as_sub_agent`` instead.
+        """
         body = {
             "name": name,
             "framework": framework,
             "description": description,
             "owner": owner,
+            "parent_agent_id": parent_agent_id,
         }
         return self._request("POST", "/agents/register", json={k: v for k, v in body.items() if v is not None})
 
